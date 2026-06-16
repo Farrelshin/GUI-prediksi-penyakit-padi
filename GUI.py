@@ -327,7 +327,7 @@ DISEASE_INFO = {
 # ─────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("## 🌾 Smart Rice Guard")
-    st.markdown("<p style='color:#b0b0b0;font-size:0.82rem;margin-top:-8px;'>v3.0 · Multi-Model · 10 Parameter Iklim</p>", unsafe_allow_html=True)
+    st.markdown("<p style='color:#b0b0b0;font-size:0.82rem;margin-top:-8px;'>v3.0 · Multi-Model · 4 Parameter Iklim</p>", unsafe_allow_html=True)
     st.markdown("---")
 
     if scaler is None:
@@ -353,14 +353,14 @@ with st.sidebar:
     border-radius:10px;padding:14px;text-align:center;margin-top:10px;margin-bottom:16px;'>
         <div style='font-size:0.72rem;color:#b0b0b0;letter-spacing:0.08em;text-transform:uppercase;'>Akurasi Model Aktif</div>
         <div style='font-size:2rem;font-weight:700;color:#ffffff;'>{active_accuracy}%</div>
-        <div style='font-size:0.7rem;color:#e0e0e0;margin-top:2px;'>{active_badge} · 10 Fitur · 150 Data</div>
+        <div style='font-size:0.7rem;color:#e0e0e0;margin-top:2px;'>{active_badge} · 4 Fitur · 150 Data</div>
     </div>
     """, unsafe_allow_html=True)
 
     st.markdown("<div class='sb-title'>🌡️ Temperatur</div>", unsafe_allow_html=True)
     suhu_maks  = st.number_input("Suhu Maksimal (°C)",           min_value=30.0,  max_value=50.0,   value=39.7,  step=0.1)
 
-    st.markdown("<div class='sb-title'>🌧️ Curah Hujan & Radiasi</div>", unsafe_allow_html=True)
+    st.markdown("<div class='sb-title'>🌧️ Curah Hujan</div>", unsafe_allow_html=True)
     curah_hujan = st.number_input("Total Curah Hujan (mm)",       min_value=0.0,   max_value=1500.0, value=197.5, step=1.0)
 
     st.markdown("<div class='sb-title'>💧 Kelembapan</div>", unsafe_allow_html=True)
@@ -397,7 +397,7 @@ with col1:
     </div>""", unsafe_allow_html=True)
 with col2:
     st.markdown("""<div class="metric-card">
-        <div class="m-value">10</div>
+        <div class="m-value">4</div>
         <div class="m-label">Parameter Input</div>
     </div>""", unsafe_allow_html=True)
 with col3:
