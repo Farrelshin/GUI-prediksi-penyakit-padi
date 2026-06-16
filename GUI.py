@@ -359,21 +359,13 @@ with st.sidebar:
 
     st.markdown("<div class='sb-title'>🌡️ Temperatur</div>", unsafe_allow_html=True)
     suhu_maks  = st.number_input("Suhu Maksimal (°C)",           min_value=30.0,  max_value=50.0,   value=39.7,  step=0.1)
-    suhu_min   = st.number_input("Suhu Minimal (°C)",            min_value=0.0,   max_value=15.0,   value=7.8,   step=0.1)
-    suhu_tanah = st.number_input("Suhu Permukaan Tanah (°C)",    min_value=18.0,  max_value=30.0,   value=23.4,  step=0.1)
-
-    st.markdown("<div class='sb-title'>💨 Kecepatan Angin</div>", unsafe_allow_html=True)
-    angin_maks = st.number_input("Kecepatan Angin Maks (m/s)",   min_value=0.0,   max_value=15.0,   value=5.1,   step=0.1)
-    angin_min  = st.number_input("Kecepatan Angin Min (m/s)",    min_value=0.0,   max_value=1.0,    value=0.04,  step=0.01, format="%.3f")
 
     st.markdown("<div class='sb-title'>🌧️ Curah Hujan & Radiasi</div>", unsafe_allow_html=True)
     curah_hujan = st.number_input("Total Curah Hujan (mm)",       min_value=0.0,   max_value=1500.0, value=197.5, step=1.0)
-    radiasi     = st.number_input("Total Radiasi Matahari (MJ/m²)", min_value=5.0, max_value=12.0,  value=7.7,   step=0.1)
 
     st.markdown("<div class='sb-title'>💧 Kelembapan</div>", unsafe_allow_html=True)
     kel_udara      = st.number_input("Kelembapan Udara (%)",            min_value=4.0,  max_value=18.0, value=10.0,  step=0.1)
     kel_tanah_akar = st.number_input("Kelembapan Tanah Akar (0–1)",     min_value=0.0,  max_value=1.0,  value=0.49,  step=0.01, format="%.3f")
-    kel_tanah_perm = st.number_input("Kelembapan Tanah Permukaan (0–1)",min_value=0.0,  max_value=1.0,  value=0.45,  step=0.01, format="%.3f")
 
     st.markdown("---")
     predict_btn = st.button("🔍 Analisis Sekarang", type="primary")
