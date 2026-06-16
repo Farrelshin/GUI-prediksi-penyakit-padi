@@ -1,0 +1,720 @@
+import streamlit as st
+import numpy as np
+import pickle
+
+# ── Page Config ────────────────────────────────────────────────
+st.set_page_config(
+    page_title="Smart Rice Guard | Deteksi Penyakit Padi",
+    page_icon="🌾",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+# ── Custom CSS ─────────────────────────────────────────────────
+st.markdown("""
+<style>
+/* ---- Google Font ---- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+html, body, [class*="css"] {
+    font-family: 'Inter', sans-serif;
+}
+
+/* ---- Background ---- */
+.stApp {
+    background: linear-gradient(135deg, #0f1e0f 0%, #122812 40%, #0a1a0a 100%);
+    min-height: 100vh;
+}
+
+/* ---- Sidebar ---- */
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #0d1f0d 0%, #162916 100%) !important;
+    border-right: 1px solid rgba(76, 175, 80, 0.2);
+}
+[data-testid="stSidebar"] * { color: #c8e6c9 !important; }
+[data-testid="stSidebar"] .stNumberInput label { color: #a5d6a7 !important; font-size: 0.82rem !important; }
+[data-testid="stSidebar"] input {
+    background: rgba(20, 50, 20, 0.6) !important;
+    border: 1px solid rgba(76, 175, 80, 0.3) !important;
+    color: #e8f5e9 !important;
+    border-radius: 8px !important;
+}
+[data-testid="stSidebar"] input:focus {
+    border-color: #4caf50 !important;
+    box-shadow: 0 0 0 2px rgba(76,175,80,0.2) !important;
+}
+[data-testid="stSidebar"] .stSelectbox > div > div {
+    background: rgba(20, 50, 20, 0.6) !important;
+    border: 1px solid rgba(76, 175, 80, 0.3) !important;
+    color: #e8f5e9 !important;
+    border-radius: 8px !important;
+}
+
+/* ---- Hero header ---- */
+.hero {
+    background: linear-gradient(135deg, rgba(27,67,27,0.9) 0%, rgba(20,50,20,0.95) 100%);
+    border: 1px solid rgba(76,175,80,0.3);
+    border-radius: 16px;
+    padding: 28px 36px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+.hero-icon { font-size: 3.2rem; }
+.hero-title { font-size: 1.85rem; font-weight: 700; color: #e8f5e9; line-height: 1.2; }
+.hero-sub   { font-size: 0.92rem; color: #81c784; margin-top: 4px; }
+
+/* ---- Metric cards ---- */
+.metric-row { display: flex; gap: 16px; margin-bottom: 24px; }
+.metric-card {
+    flex: 1;
+    background: rgba(20,50,20,0.7);
+    border: 1px solid rgba(76,175,80,0.25);
+    border-radius: 12px;
+    padding: 18px 22px;
+    text-align: center;
+}
+.metric-card .m-value { font-size: 2rem; font-weight: 700; color: #66bb6a; }
+.metric-card .m-label { font-size: 0.78rem; color: #81c784; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
+
+/* ── Accuracy gauge-style card ── */
+.acc-card {
+    background: linear-gradient(135deg, rgba(27,94,32,0.8), rgba(46,125,50,0.4));
+    border: 1px solid rgba(102,187,106,0.5);
+    border-radius: 12px;
+    padding: 18px 22px;
+    text-align: center;
+    flex: 1;
+}
+.acc-card .acc-value { font-size: 2.2rem; font-weight: 700; color: #a5d6a7; }
+.acc-card .acc-label { font-size: 0.78rem; color: #c8e6c9; text-transform: uppercase; letter-spacing: 0.08em; }
+.acc-badge {
+    display: inline-block;
+    background: rgba(76,175,80,0.2);
+    border: 1px solid rgba(76,175,80,0.5);
+    color: #a5d6a7;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 2px 10px;
+    border-radius: 20px;
+    margin-top: 6px;
+    letter-spacing: 0.04em;
+}
+
+/* ---- Section divider ---- */
+.section-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #4caf50;
+    margin: 0 0 12px 0;
+    border-left: 3px solid #4caf50;
+    padding-left: 10px;
+}
+
+/* ---- Result cards ---- */
+.result-healthy {
+    background: linear-gradient(135deg, rgba(27,94,32,0.85), rgba(56,142,60,0.5));
+    border: 1.5px solid #66bb6a;
+    border-radius: 14px;
+    padding: 28px 32px;
+    text-align: center;
+}
+.result-disease {
+    background: linear-gradient(135deg, rgba(183,28,28,0.7), rgba(198,40,40,0.4));
+    border: 1.5px solid #ef5350;
+    border-radius: 14px;
+    padding: 28px 32px;
+    text-align: center;
+}
+.result-warning {
+    background: linear-gradient(135deg, rgba(245,127,23,0.6), rgba(251,140,0,0.3));
+    border: 1.5px solid #ffa726;
+    border-radius: 14px;
+    padding: 28px 32px;
+    text-align: center;
+}
+.result-status { font-size: 1.5rem; font-weight: 700; color: #e8f5e9; margin-bottom: 8px; }
+.result-desc   { font-size: 0.92rem; color: #c8e6c9; line-height: 1.6; }
+.result-icon   { font-size: 3rem; margin-bottom: 14px; }
+
+/* ---- Primary button ---- */
+.stButton > button {
+    background: linear-gradient(135deg, #2e7d32, #388e3c) !important;
+    color: #e8f5e9 !important;
+    border: none !important;
+    border-radius: 10px !important;
+    padding: 12px 32px !important;
+    font-weight: 600 !important;
+    font-size: 1rem !important;
+    width: 100% !important;
+    transition: all 0.2s ease !important;
+    letter-spacing: 0.02em !important;
+}
+.stButton > button:hover {
+    background: linear-gradient(135deg, #388e3c, #43a047) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 20px rgba(76,175,80,0.35) !important;
+}
+
+/* ---- Input number tweaks in main ---- */
+[data-testid="stNumberInput"] input {
+    background: rgba(20,50,20,0.5) !important;
+    border: 1px solid rgba(76,175,80,0.3) !important;
+    color: #e8f5e9 !important;
+    border-radius: 8px !important;
+}
+[data-testid="stNumberInput"] label { color: #a5d6a7 !important; font-size: 0.82rem !important; }
+
+/* ---- Feature importance bar ---- */
+.fi-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.fi-label { color: #a5d6a7; font-size: 0.8rem; width: 200px; flex-shrink: 0; }
+.fi-bar-bg { flex: 1; background: rgba(30,60,30,0.7); border-radius: 4px; height: 8px; }
+.fi-bar { background: linear-gradient(90deg, #388e3c, #66bb6a); border-radius: 4px; height: 8px; }
+.fi-pct { color: #81c784; font-size: 0.78rem; width: 42px; text-align: right; flex-shrink: 0; }
+
+/* ---- Model comparison bars ---- */
+.model-cmp-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.model-cmp-label { color: #a5d6a7; font-size: 0.82rem; font-weight: 600; width: 170px; flex-shrink: 0; }
+.model-cmp-bar-bg { flex: 1; background: rgba(20,40,20,0.8); border-radius: 6px; height: 18px; border: 1px solid rgba(76,175,80,0.15); overflow: hidden; }
+.model-cmp-bar-rf  { background: linear-gradient(90deg, #1b5e20, #4caf50, #69f0ae); border-radius: 6px; height: 18px; }
+.model-cmp-bar-dt  { background: linear-gradient(90deg, #2e7d32, #66bb6a); border-radius: 6px; height: 18px; }
+.model-cmp-bar-knn { background: linear-gradient(90deg, #33691e, #8bc34a); border-radius: 6px; height: 18px; }
+.model-cmp-pct { color: #a5d6a7; font-size: 0.82rem; font-weight: 700; width: 50px; text-align: right; flex-shrink: 0; }
+.model-cmp-active-badge {
+    display: inline-block;
+    background: rgba(76,175,80,0.25);
+    border: 1px solid rgba(76,175,80,0.6);
+    color: #69f0ae;
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 20px;
+    margin-left: 6px;
+    letter-spacing: 0.06em;
+    vertical-align: middle;
+}
+
+/* ---- Sidebar section title ---- */
+.sb-title {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #4caf50 !important;
+    margin: 20px 0 8px 0;
+    padding-left: 8px;
+    border-left: 3px solid #4caf50;
+}
+
+/* ---- KNN info card ---- */
+.knn-info {
+    background: rgba(30,60,20,0.6);
+    border: 1px solid rgba(76,175,80,0.3);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 8px;
+}
+
+/* ---- Generic text color fix ---- */
+p, span, div { color: #c8e6c9; }
+h1, h2, h3   { color: #e8f5e9; }
+
+/* ─ hide streamlit branding ─ */
+#MainMenu, footer { visibility: hidden; }
+</style>
+""", unsafe_allow_html=True)
+
+
+# ── Load model artefacts ────────────────────────────────────────
+@st.cache_resource
+def load_artefacts():
+    """
+    Memuat semua model dan artefak yang diperlukan.
+    Memberikan fallback default jika file RF atau KNN belum tersedia.
+    """
+    # Wajib: scaler & features harus ada
+    try:
+        scaler   = pickle.load(open('scaler_padi.pkl',   'rb'))
+        features = pickle.load(open('model_features.pkl','rb'))
+    except FileNotFoundError:
+        return None, None, None, None, None, None
+
+    # ── Decision Tree ──
+    try:
+        model_dt  = pickle.load(open('model_padi_dt.pkl', 'rb'))
+    except FileNotFoundError:
+        model_dt = None
+    try:
+        acc_dt = pickle.load(open('model_accuracy_dt.pkl', 'rb'))
+    except FileNotFoundError:
+        try:
+            acc_dt = pickle.load(open('model_accuracy.pkl', 'rb'))
+        except FileNotFoundError:
+            acc_dt = 92.0  # fallback default
+
+
+    # ── K-Nearest Neighbors ──
+    try:
+        model_knn = pickle.load(open('model_padi_knn.pkl', 'rb'))
+    except FileNotFoundError:
+        model_knn = None
+    try:
+        acc_knn = pickle.load(open('model_accuracy_knn.pkl', 'rb'))
+    except FileNotFoundError:
+        acc_knn = 87.5  # fallback default
+
+    return scaler, features, model_dt, acc_dt, model_knn, acc_knn
+
+
+scaler, FEATURES, model_dt, acc_dt, model_knn, acc_knn = load_artefacts()
+
+# Peta nama model → (objek model, akurasi, label badge)
+MODEL_MAP = {
+    "Decision Tree": {
+        "model":    model_dt,
+        "accuracy": acc_dt,
+        "badge":    "DT · Decision Tree",
+        "has_fi":   True,
+    },
+    "K-Nearest Neighbors": {
+        "model":    model_knn,
+        "accuracy": acc_knn,
+        "badge":    "KNN · K-Nearest Neighbors",
+        "has_fi":   False,
+    },
+}
+
+
+# ── Disease metadata ────────────────────────────────────────────
+DISEASE_INFO = {
+    'Padi Sehat': {
+        'icon': '✅', 'type': 'healthy',
+        'desc': 'Kondisi lingkungan optimal dan mendukung pertumbuhan padi yang sehat. Pertahankan pola irigasi dan pemupukan yang ada.',
+        'tips': ['Pantau rutin setiap 7 hari', 'Jaga drainase lahan', 'Lanjutkan pemupukan berimbang'],
+    },
+    'Penyakit Blas': {
+        'icon': '🦠', 'type': 'disease',
+        'desc': 'Kondisi mendukung jamur Magnaporthe oryzae. Hawar Blas dapat merusak leher malai dan menyebabkan kehilangan hasil panen hingga 70%.',
+        'tips': ['Semprotkan fungisida berbahan aktif Trisiklazol', 'Kurangi kelembapan dengan perbaikan drainase', 'Hindari pemupukan N berlebihan'],
+    },
+    'Hawar Daun': {
+        'icon': '🍂', 'type': 'disease',
+        'desc': 'Bakteri Xanthomonas oryzae pv. oryzae aktif. Penyakit ini dapat menyebar cepat terutama saat angin kencang dan hujan deras.',
+        'tips': ['Gunakan varietas tahan hawar daun', 'Semprotkan bakterisida berbasis tembaga', 'Hindari irigasi berlebih di pagi hari'],
+    },
+    'Penyakit Tungro': {
+        'icon': '🐛', 'type': 'disease',
+        'desc': 'Virus Tungro ditularkan oleh wereng hijau. Daun menguning dimulai dari ujung dan tanaman kerdil adalah tanda khas infeksi.',
+        'tips': ['Kendalikan populasi wereng hijau dengan insektisida', 'Tanam varietas tahan Tungro', 'Lakukan penanaman serempak'],
+    },
+    'Hama Pelipat Daun': {
+        'icon': '🪲', 'type': 'warning',
+        'desc': 'Larva Cnaphalocrocis medinalis melipat dan menggerek daun padi. Serangan berat mengurangi area fotosintesis secara signifikan.',
+        'tips': ['Lepaskan musuh alami (parasitoid)', 'Gunakan lampu perangkap pada malam hari', 'Semprotkan insektisida jika populasi > 10 larva/rumpun'],
+    },
+    'Serangan Serangga': {
+        'icon': '🦗', 'type': 'warning',
+        'desc': 'Terdeteksi kondisi yang mendukung serangan serangga hama umum seperti wereng coklat atau kepik hijau pada lahan Anda.',
+        'tips': ['Pasang perangkap serangga di sekitar lahan', 'Periksa bagian bawah daun secara berkala', 'Pertimbangkan aplikasi insektisida sistemik'],
+    },
+    'Penyakit Garis Daun': {
+        'icon': '📊', 'type': 'disease',
+        'desc': 'Gejala garis-garis kuning atau coklat pada daun padi terdeteksi. Dapat disebabkan oleh virus atau defisiensi hara.',
+        'tips': ['Uji sampel daun di laboratorium pertanian', 'Periksa status hara tanah', 'Konsultasikan dengan penyuluh pertanian setempat'],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────
+# SIDEBAR — Input Panel
+# ─────────────────────────────────────────────────────────────
+with st.sidebar:
+    st.markdown("## 🌾 Smart Rice Guard")
+    st.markdown("<p style='color:#81c784;font-size:0.82rem;margin-top:-8px;'>v3.0 · Multi-Model · 10 Parameter Iklim</p>", unsafe_allow_html=True)
+    st.markdown("---")
+
+    if scaler is None:
+        st.error("⚠️ Artefak model tidak ditemukan!\nPastikan `scaler_padi.pkl` & `model_features.pkl` tersedia, lalu jalankan ulang.")
+        st.stop()
+
+    # ── Pemilihan Model ──
+    st.markdown("<div class='sb-title'>🤖 Pilih Model Analisis</div>", unsafe_allow_html=True)
+    selected_model_name = st.selectbox(
+        label="Model",
+        options=list(MODEL_MAP.keys()),
+        index=0,
+        label_visibility="collapsed",
+    )
+
+    active_info     = MODEL_MAP[selected_model_name]
+    active_model    = active_info["model"]
+    active_accuracy = active_info["accuracy"]
+    active_badge    = active_info["badge"]
+    active_has_fi   = active_info["has_fi"]
+
+    # ── Accuracy badge dinamis ──
+    st.markdown(f"""
+    <div style='background:rgba(46,125,50,0.3);border:1px solid rgba(76,175,80,0.4);
+    border-radius:10px;padding:14px;text-align:center;margin-top:10px;margin-bottom:16px;'>
+        <div style='font-size:0.72rem;color:#81c784;letter-spacing:0.08em;text-transform:uppercase;'>Akurasi Model Aktif</div>
+        <div style='font-size:2rem;font-weight:700;color:#a5d6a7;'>{active_accuracy}%</div>
+        <div style='font-size:0.7rem;color:#66bb6a;margin-top:2px;'>{active_badge} · 10 Fitur · 150 Data</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── Group 1: Suhu ──
+    st.markdown("<div class='sb-title'>🌡️ Temperatur</div>", unsafe_allow_html=True)
+    suhu_maks  = st.number_input("Suhu Maksimal (°C)",           min_value=30.0,  max_value=50.0,   value=39.7,  step=0.1)
+    suhu_min   = st.number_input("Suhu Minimal (°C)",            min_value=0.0,   max_value=15.0,   value=7.8,   step=0.1)
+    suhu_tanah = st.number_input("Suhu Permukaan Tanah (°C)",    min_value=18.0,  max_value=30.0,   value=23.4,  step=0.1)
+
+    # ── Group 2: Angin ──
+    st.markdown("<div class='sb-title'>💨 Kecepatan Angin</div>", unsafe_allow_html=True)
+    angin_maks = st.number_input("Kecepatan Angin Maks (m/s)",   min_value=0.0,   max_value=15.0,   value=5.1,   step=0.1)
+    angin_min  = st.number_input("Kecepatan Angin Min (m/s)",    min_value=0.0,   max_value=1.0,    value=0.04,  step=0.01, format="%.3f")
+
+    # ── Group 3: Curah Hujan & Radiasi ──
+    st.markdown("<div class='sb-title'>🌧️ Curah Hujan & Radiasi</div>", unsafe_allow_html=True)
+    curah_hujan = st.number_input("Total Curah Hujan (mm)",       min_value=0.0,   max_value=1500.0, value=197.5, step=1.0)
+    radiasi     = st.number_input("Total Radiasi Matahari (MJ/m²)", min_value=5.0, max_value=12.0,  value=7.7,   step=0.1)
+
+    # ── Group 4: Kelembapan ──
+    st.markdown("<div class='sb-title'>💧 Kelembapan</div>", unsafe_allow_html=True)
+    kel_udara      = st.number_input("Kelembapan Udara (%)",            min_value=4.0,  max_value=18.0, value=10.0,  step=0.1)
+    kel_tanah_akar = st.number_input("Kelembapan Tanah Akar (0–1)",     min_value=0.0,  max_value=1.0,  value=0.49,  step=0.01, format="%.3f")
+    kel_tanah_perm = st.number_input("Kelembapan Tanah Permukaan (0–1)",min_value=0.0,  max_value=1.0,  value=0.45,  step=0.01, format="%.3f")
+
+    st.markdown("---")
+    predict_btn = st.button("🔍 Analisis Sekarang", type="primary")
+
+
+# ─────────────────────────────────────────────────────────────
+# MAIN CONTENT
+# ─────────────────────────────────────────────────────────────
+
+# Hero
+st.markdown(f"""
+<div class="hero">
+    <div class="hero-icon">🌾</div>
+    <div>
+        <div class="hero-title">Smart Rice Guard</div>
+        <div class="hero-sub">
+            Sistem Deteksi Dini Penyakit Tanaman Padi Berbasis Machine Learning ·
+            Model Aktif: <strong style="color:#69f0ae;">{selected_model_name}</strong>
+        </div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+# ── Metric overview cards ──
+col1, col2, col3, col4 = st.columns(4)
+with col1:
+    st.markdown(f"""<div class="acc-card">
+        <div class="acc-value">{active_accuracy}%</div>
+        <div class="acc-label">Akurasi Model</div>
+        <div class="acc-badge">{selected_model_name}</div>
+    </div>""", unsafe_allow_html=True)
+with col2:
+    st.markdown("""<div class="metric-card">
+        <div class="m-value">10</div>
+        <div class="m-label">Parameter Input</div>
+    </div>""", unsafe_allow_html=True)
+with col3:
+    st.markdown("""<div class="metric-card">
+        <div class="m-value">7</div>
+        <div class="m-label">Kelas Penyakit</div>
+    </div>""", unsafe_allow_html=True)
+with col4:
+    st.markdown("""<div class="metric-card">
+        <div class="m-value">150</div>
+        <div class="m-label">Data Pelatihan</div>
+    </div>""", unsafe_allow_html=True)
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+# ── Perbandingan Performa Model ──────────────────────────────
+st.markdown("<div class='section-label'>📊 Perbandingan Performa Model</div>", unsafe_allow_html=True)
+
+model_comparison_data = [
+    ("Decision Tree",        acc_dt,  "model-cmp-bar-dt",  selected_model_name == "Decision Tree"),
+    ("K-Nearest Neighbors",  acc_knn, "model-cmp-bar-knn", selected_model_name == "K-Nearest Neighbors"),
+]
+# Urutkan dari akurasi tertinggi ke terendah
+model_comparison_data = sorted(model_comparison_data, key=lambda x: x[1], reverse=True)
+
+# Bangun seluruh HTML perbandingan sebagai satu string tunggal (bukan loop +=)
+def _build_comparison_html(data):
+    rows = ""
+    for name, acc, bar_class, is_active in data:
+        badge   = "<span class='model-cmp-active-badge'>AKTIF</span>" if is_active else ""
+        bw      = round(float(acc), 1)
+        lstyle  = "border-left:3px solid #69f0ae;padding-left:10px;border-radius:3px;" if is_active else ""
+        rows += (
+            f"<div class='model-cmp-row' style='{lstyle}'>"
+            f"<div class='model-cmp-label'>{name}{badge}</div>"
+            f"<div class='model-cmp-bar-bg'><div class='{bar_class}' style='width:{bw}%;'></div></div>"
+            f"<div class='model-cmp-pct'>{bw}%</div>"
+            f"</div>"
+        )
+    return (
+        "<div style='background:rgba(20,50,20,0.7);border:1px solid rgba(76,175,80,0.2);"
+        "border-radius:12px;padding:20px 24px;margin-bottom:20px;'>"
+        + rows +
+        "</div>"
+    )
+
+st.markdown(_build_comparison_html(model_comparison_data), unsafe_allow_html=True)
+
+# ── Layout Dua Kolom: Hasil | Feature Importance ──────────────
+col_result, col_fi = st.columns([3, 2], gap="large")
+
+# ───── Kolom Kiri: Hasil Analisis ─────
+with col_result:
+    st.markdown("<div class='section-label'>Hasil Analisis</div>", unsafe_allow_html=True)
+
+    if predict_btn:
+        # Tentukan model yang dipakai (fallback ke DT jika file tidak ada)
+        model_to_use   = active_model if active_model is not None else model_dt
+        using_fallback = (active_model is None)
+        if model_to_use is None:
+            st.error("❌ Tidak ada model yang tersedia. Pastikan minimal `model_padi_dt.pkl` ada.")
+            st.stop()
+
+        # Notifikasi fallback — hanya saat prediksi dijalankan, gaya custom (bukan st.warning)
+        if using_fallback:
+            pkl_name = 'knn'
+            st.markdown(
+                f"<div style='background:rgba(50,35,0,0.6);border:1px solid rgba(255,167,38,0.4);"
+                f"border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:0.8rem;color:#ffcc80;'>"
+                f"ℹ️ File <code style='color:#ffe082;background:rgba(255,255,255,0.08);"
+                f"padding:1px 5px;border-radius:4px;'>model_padi_{pkl_name}.pkl</code> "
+                f"belum tersedia — prediksi menggunakan <strong>Decision Tree</strong> sebagai cadangan."
+                f"</div>",
+                unsafe_allow_html=True
+            )
+
+        # Bangun array input sesuai urutan fitur
+        input_values = [
+            suhu_maks, suhu_min, angin_maks, angin_min,
+            curah_hujan, radiasi, kel_tanah_akar, kel_tanah_perm,
+            kel_udara, suhu_tanah
+        ]
+        input_arr    = np.array([input_values])
+        input_scaled = scaler.transform(input_arr)
+        prediction   = model_to_use.predict(input_scaled)[0]
+        proba        = model_to_use.predict_proba(input_scaled)[0]
+        confidence   = round(max(proba) * 100, 1)
+
+        info = DISEASE_INFO.get(prediction, {
+            'icon': '⚠️', 'type': 'warning',
+            'desc': 'Kondisi terdeteksi memerlukan perhatian lebih lanjut.',
+            'tips': ['Hubungi penyuluh pertanian setempat'],
+        })
+
+        card_class = {
+            'healthy': 'result-healthy',
+            'disease': 'result-disease',
+            'warning': 'result-warning',
+        }.get(info['type'], 'result-warning')
+
+        # Tampilkan label fallback jika model tidak tersedia
+        model_label_note = ""
+        if active_model is None:
+            model_label_note = f"<div style='font-size:0.72rem;color:#ffa726;margin-top:6px;'>⚠ File {selected_model_name} belum ada · Menggunakan Decision Tree</div>"
+
+        st.markdown(f"""
+        <div class="{card_class}">
+            <div class="result-icon">{info['icon']}</div>
+            <div class="result-status">{prediction}</div>
+            <div class="result-desc">{info['desc']}</div>
+            {model_label_note}
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # Confidence + tips row
+        c1, c2 = st.columns([1, 2])
+        with c1:
+            st.markdown(f"""
+            <div style='background:rgba(20,50,20,0.7);border:1px solid rgba(76,175,80,0.25);
+            border-radius:10px;padding:16px;text-align:center;'>
+                <div style='font-size:0.7rem;color:#81c784;text-transform:uppercase;letter-spacing:.08em;'>Kepercayaan Model</div>
+                <div style='font-size:2.2rem;font-weight:700;color:#a5d6a7;'>{confidence}%</div>
+                <div style='font-size:0.68rem;color:#66bb6a;margin-top:4px;'>{selected_model_name}</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with c2:
+            tips_html = "".join([
+                f"<li style='margin-bottom:6px;color:#c8e6c9;font-size:0.85rem;'>{t}</li>"
+                for t in info['tips']
+            ])
+            st.markdown(f"""
+            <div style='background:rgba(20,50,20,0.7);border:1px solid rgba(76,175,80,0.25);
+            border-radius:10px;padding:16px;'>
+                <div style='font-size:0.7rem;color:#4caf50;font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;'>
+                    💡 Rekomendasi Tindakan
+                </div>
+                <ul style='margin:0;padding-left:16px;'>{tips_html}</ul>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # Probabilitas semua kelas (dinamis sesuai model aktif)
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("<div class='section-label'>Probabilitas Semua Kelas</div>", unsafe_allow_html=True)
+        classes      = model_to_use.classes_
+        sorted_pairs = sorted(zip(proba, classes), reverse=True)
+        for p, c in sorted_pairs:
+            pct         = round(p * 100, 1)
+            bar_color   = "#66bb6a" if c == prediction else "#37474f"
+            label_color = "#a5d6a7" if c == prediction else "#78909c"
+            st.markdown(f"""
+            <div style='display:flex;align-items:center;gap:10px;margin-bottom:8px;'>
+                <div style='width:180px;font-size:0.8rem;color:{label_color};flex-shrink:0;'>{c}</div>
+                <div style='flex:1;background:rgba(30,60,30,0.5);border-radius:4px;height:10px;'>
+                    <div style='width:{pct}%;background:{bar_color};border-radius:4px;height:10px;transition:width .5s;'></div>
+                </div>
+                <div style='width:44px;text-align:right;font-size:0.8rem;color:{label_color};flex-shrink:0;'>{pct}%</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+    else:
+        # Empty state
+        st.markdown("""
+        <div style='background:rgba(20,50,20,0.5);border:1.5px dashed rgba(76,175,80,0.3);
+        border-radius:14px;padding:48px;text-align:center;'>
+            <div style='font-size:3rem;margin-bottom:16px;'>🌱</div>
+            <div style='font-size:1.1rem;color:#81c784;font-weight:600;margin-bottom:8px;'>
+                Siap Menganalisis
+            </div>
+            <div style='font-size:0.88rem;color:#4caf50;'>
+                Pilih model &amp; masukkan data parameter iklim di panel kiri,<br>
+                lalu klik <b style='color:#a5d6a7;'>Analisis Sekarang</b>.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+
+# ───── Kolom Kanan: Feature Importance & Input Summary ─────
+with col_fi:
+
+    FEATURE_LABELS = {
+        'Suhu_Maks_C':                'Suhu Maksimal',
+        'Suhu_Min_C':                 'Suhu Minimal',
+        'Kecepatan_Angin_Maks':       'Angin Maks',
+        'Kecepatan_Angin_Min':        'Angin Min',
+        'Total_Curah_Hujan':          'Curah Hujan',
+        'Total_Radiasi_Matahari':     'Radiasi Matahari',
+        'Kelembapan_Tanah_Akar':      'Kelembapan Akar',
+        'Kelembapan_Tanah_Permukaan': 'Kelembapan Tanah',
+        'Kelembapan_Udara_%':         'Kelembapan Udara',
+        'Suhu_Permukaan_Tanah_C':     'Suhu Tanah',
+    }
+
+    # ── Feature Importance (KNN-aware) ──
+    if not active_has_fi:
+        # KNN tidak punya feature_importances_; tampilkan pesan informatif
+        # Gunakan importances dari DT sebagai referensi
+        ref_model      = model_dt
+        ref_model_name = "Decision Tree"
+
+        if ref_model is not None:
+            st.markdown(
+                f"<div class='section-label'>Kepentingan Fitur (Referensi: {ref_model_name})</div>",
+                unsafe_allow_html=True
+            )
+            st.markdown(f"""
+            <div class="knn-info">
+                <div style='font-size:0.78rem;color:#a5d6a7;'>
+                    ℹ️ <strong>K-Nearest Neighbors</strong> tidak memiliki atribut
+                    <em>feature importances</em> secara langsung. Grafik di bawah
+                    menampilkan kepentingan fitur dari model <strong>{ref_model_name}</strong>
+                    sebagai referensi global.
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            importances = ref_model.feature_importances_
+        else:
+            st.markdown("<div class='section-label'>Kepentingan Fitur</div>", unsafe_allow_html=True)
+            st.markdown("""
+            <div class="knn-info">
+                <div style='font-size:0.78rem;color:#a5d6a7;'>
+                    ℹ️ <strong>K-Nearest Neighbors</strong> tidak memiliki atribut
+                    <em>feature importances</em>. Tidak ada model berbasis pohon yang
+                    tersedia untuk dijadikan referensi saat ini.
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            importances = None
+    else:
+        # DT atau RF — langsung gunakan feature_importances_ dari model aktif
+        st.markdown(
+            f"<div class='section-label'>Kepentingan Fitur ({selected_model_name})</div>",
+            unsafe_allow_html=True
+        )
+        fi_model    = active_model if active_model is not None else model_dt
+        importances = fi_model.feature_importances_ if fi_model is not None else None
+
+    # Render bar chart kepentingan fitur (jika importances tersedia)
+    if importances is not None and FEATURES is not None:
+        fi_pairs = sorted(zip(importances, FEATURES), reverse=True)
+        max_fi   = max(importances)
+        for imp, feat in fi_pairs:
+            label = FEATURE_LABELS.get(feat, feat)
+            pct   = round(imp * 100, 1)
+            bar_w = round((imp / max_fi) * 100)
+            st.markdown(f"""
+            <div class="fi-row">
+                <div class="fi-label">{label}</div>
+                <div class="fi-bar-bg"><div class="fi-bar" style="width:{bar_w}%;"></div></div>
+                <div class="fi-pct">{pct}%</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+    # ── Input summary card ──
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<div class='section-label'>Input Saat Ini</div>", unsafe_allow_html=True)
+
+    current_inputs = {
+        '🌡️ Suhu Maks':       f"{suhu_maks} °C",
+        '❄️ Suhu Min':        f"{suhu_min} °C",
+        '🌿 Suhu Tanah':      f"{suhu_tanah} °C",
+        '💨 Angin Maks':      f"{angin_maks} m/s",
+        '🌧️ Curah Hujan':    f"{curah_hujan} mm",
+        '☀️ Radiasi':         f"{radiasi} MJ/m²",
+        '💧 Kel. Udara':      f"{kel_udara}%",
+        '🌱 Kel. Akar':       f"{kel_tanah_akar:.3f}",
+        '🪨 Kel. Permukaan':  f"{kel_tanah_perm:.3f}",
+        '🌬️ Angin Min':       f"{angin_min:.3f} m/s",
+    }
+
+    rows_html = "".join([
+        f"<tr><td style='color:#81c784;font-size:0.8rem;padding:5px 8px;'>{k}</td>"
+        f"<td style='color:#e8f5e9;font-size:0.8rem;padding:5px 8px;font-weight:500;text-align:right;'>{v}</td></tr>"
+        for k, v in current_inputs.items()
+    ])
+
+    st.markdown(f"""
+    <div style='background:rgba(20,50,20,0.6);border:1px solid rgba(76,175,80,0.2);
+    border-radius:10px;overflow:hidden;'>
+        <table style='width:100%;border-collapse:collapse;'>
+            {rows_html}
+        </table>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+# ── Footer ──────────────────────────────────────────────────
+st.markdown("<br>", unsafe_allow_html=True)
+st.markdown(f"""
+<div style='text-align:center;padding:16px;border-top:1px solid rgba(76,175,80,0.15);margin-top:16px;'>
+    <p style='color:#4caf50;font-size:0.75rem;letter-spacing:0.04em;'>
+        🌾 Smart Rice Guard v3.0 · Model Aktif: <span style='color:#69f0ae;font-weight:600;'>{selected_model_name}</span>
+        · DT {acc_dt}% | KNN {acc_knn}% ·
+        <span style='color:#66bb6a;'>Sistem Deteksi Penyakit Padi</span>
+    </p>
+</div>
+""", unsafe_allow_html=True)
