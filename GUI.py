@@ -470,9 +470,7 @@ with col_result:
             )
 
         input_values = [
-            suhu_maks, suhu_min, angin_maks, angin_min,
-            curah_hujan, radiasi, kel_tanah_akar, kel_tanah_perm,
-            kel_udara, suhu_tanah
+            suhu_maks, curah_hujan, kel_tanah_akar,kel_udara
         ]
         input_arr    = np.array([input_values])
         input_scaled = scaler.transform(input_arr)
@@ -569,15 +567,9 @@ with col_result:
 with col_fi:
     FEATURE_LABELS = {
         'Suhu_Maks_C':                'Suhu Maksimal',
-        'Suhu_Min_C':                 'Suhu Minimal',
-        'Kecepatan_Angin_Maks':       'Angin Maks',
-        'Kecepatan_Angin_Min':        'Angin Min',
         'Total_Curah_Hujan':          'Curah Hujan',
-        'Total_Radiasi_Matahari':     'Radiasi Matahari',
         'Kelembapan_Tanah_Akar':      'Kelembapan Akar',
-        'Kelembapan_Tanah_Permukaan': 'Kelembapan Tanah',
         'Kelembapan_Udara_%':         'Kelembapan Udara',
-        'Suhu_Permukaan_Tanah_C':     'Suhu Tanah',
     }
 
     if not active_has_fi:
