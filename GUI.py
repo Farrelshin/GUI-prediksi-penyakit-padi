@@ -648,15 +648,9 @@ with col_fi:
 
     current_inputs = {
         '🌡️ Suhu Maks':       f"{suhu_maks} °C",
-        '❄️ Suhu Min':        f"{suhu_min} °C",
-        '🌿 Suhu Tanah':      f"{suhu_tanah} °C",
-        '💨 Angin Maks':      f"{angin_maks} m/s",
         '🌧️ Curah Hujan':    f"{curah_hujan} mm",
-        '☀️ Radiasi':         f"{radiasi} MJ/m²",
         '💧 Kel. Udara':      f"{kel_udara}%",
         '🌱 Kel. Akar':       f"{kel_tanah_akar:.3f}",
-        '🪨 Kel. Permukaan':  f"{kel_tanah_perm:.3f}",
-        '🌬️ Angin Min':       f"{angin_min:.3f} m/s",
     }
 
     rows_html = "".join([
