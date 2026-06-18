@@ -403,7 +403,7 @@ with col2:
 with col3:
     st.markdown("""<div class="metric-card">
         <div class="m-value">7</div>
-        <div class="m-label">Kelas Penyakit</div>
+        <div class="m-label">Kelas Penyakit dan Padi Sehat</div>
     </div>""", unsafe_allow_html=True)
 with col4:
     st.markdown("""<div class="metric-card">
